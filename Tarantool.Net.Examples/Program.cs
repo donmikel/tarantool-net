@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka;
 using Akka.Actor;
-using Akka.Util.Internal.Collections;
 using Tarantool.Net.IProto;
 
 namespace Tarantool.Net.Examples
