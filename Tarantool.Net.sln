@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tarantool.Net", "Tarantool-net\Tarantool.Net.csproj", "{8EE464C8-B151-42C3-96BF-8D655FF8B6B9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tarantool.Net", "Tarantool.Net\Tarantool.Net.csproj", "{8EE464C8-B151-42C3-96BF-8D655FF8B6B9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tarantool.Net.Tests", "Tarantool.Net.Tests\Tarantool.Net.Tests.csproj", "{8462A3A5-8C7D-4CD6-AFC8-F487C23DA28E}"
 EndProject
