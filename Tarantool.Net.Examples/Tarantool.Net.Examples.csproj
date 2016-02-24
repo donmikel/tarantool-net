@@ -63,7 +63,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Tarantool-net\Tarantool.Net.csproj">
+    <ProjectReference Include="..\Tarantool.Net\Tarantool.Net.csproj">
       <Project>{8EE464C8-B151-42C3-96BF-8D655FF8B6B9}</Project>
       <Name>Tarantool.Net</Name>
     </ProjectReference>
