@@ -1,5 +1,6 @@
 ﻿using System;
 using MsgPack;
+using MsgPack.Serialization;
 
 namespace Tarantool.Net.IProto
 {
@@ -12,10 +13,13 @@ namespace Tarantool.Net.IProto
             Arg = default(T);
         }
 
+        [MessagePackMember(1)]
         public UInt32 FieldNo { protected get; set; }
 
+        [MessagePackMember(0)]
         public string Code { protected get; set; }
 
+        [MessagePackMember(2)]
         public T Arg { protected get; set; }
 
         public void PackToMessage(Packer packer, PackingOptions options)

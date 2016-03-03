@@ -64,14 +64,6 @@ namespace Tarantool.Net
             Become(Disconnected);
         }
 
-        //private bool NeedStash
-        //{
-        //    get
-        //    {
-                
-        //    }
-        //}
-
         protected override void PreStart()
         {
             _listeners.ForEach(l => Context.Watch(l));
@@ -119,27 +111,6 @@ namespace Tarantool.Net
                 }
             });
         }
-
-    //    private void HandleListenedMessages()
-    //    {
-    ////          case Connection.Connecting(_, _)       ⇒ // do nothing
-    ////case Connection.ConnectionFailed(_, _) ⇒ // do nothing
-    ////case Sentinel.ConnectionFailed(_)      ⇒ // do nothing
-    ////case Redis.AuthenticationFailed(_, _)  ⇒ //; do nothing
-    ////case Connection.Connected(_, _)        ⇒ setConnected()
-    ////case Connection.Disconnected(_, _)     ⇒ setDisconnected()
-
-    //        Receive<Connection.Connecting>(_ => { });
-    //        Receive<Connection.ConnectionFailed>(_ => { });
-    //        Receive<AuthenticationFailed>(_ => { });
-    //        Receive<Connection.Connected>(_ => { });
-    //        Receive<Connection.Disconnected>(_ => SetDisconnected());
-    //    }
-
-        //private void SetDisconnected()
-        //{
-        //    throw new NotImplementedException();
-        //}
 
         public IStash Stash { get; set; }
     }
