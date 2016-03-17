@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -15,7 +17,9 @@ namespace Tarantool.Net
 {
     public class Connection : ReceiveActor
     {
-        public class StateChange {}
+        private static readonly MessagePackSerializer<Response> Serializer =
+            SerializationContext.Default.GetSerializer<Response>();
+        public class StateChange { }
         public class Connecting : StateChange
         {
             public Connecting(string host, int port)
@@ -66,14 +70,15 @@ namespace Tarantool.Net
         }
         private class CommandAck : Tcp.Event
         {
-            public CommandAck(IActorRef sender)
+            public CommandAck(IActorRef sender, int sync)
             {
                 Sender = sender;
+                Sync = sync;
             }
 
             public IActorRef Sender { get; private set; }
+            public int Sync { get; private set; }
         }
-
         private class Heartbeat
         {
             public Heartbeat(TimeSpan delay)
@@ -81,15 +86,14 @@ namespace Tarantool.Net
                 Delay = delay;
             }
 
-            public TimeSpan Delay { get; private set; } 
+            public TimeSpan Delay { get; private set; }
         }
-
         internal class Connect
         {
         }
         public class CurrentConnection
         {
-            public CurrentConnection(IActorRef socket, int sync = 0)
+            public CurrentConnection(IActorRef socket, int sync = 10)
             {
                 Sync = sync;
                 Socket = socket;
@@ -110,10 +114,12 @@ namespace Tarantool.Net
         private readonly int _port;
         private readonly TimeSpan _connectionTimeout;
         private readonly TimeSpan _heartbeatDelay;
-        private readonly Queue<IActorRef> _requesterQueue;
+        //private readonly Queue<IActorRef> _requesterQueue;
+        private readonly Dictionary<int, IActorRef> _requesterDictionary;
         private GreatingResponse _greatingResponse;
         private CurrentConnection _currentConnection;
         private DateTime _lastDataReceived = DateTime.Now;
+        private byte[] _responseBuffer;
         public Connection(IActorRef listener, string host, int port, TimeSpan connectionTimeout, TimeSpan? heartbeatDelay = null)
         {
             _listener = listener;
@@ -121,7 +127,9 @@ namespace Tarantool.Net
             _port = port;
             _connectionTimeout = connectionTimeout;
             _heartbeatDelay = heartbeatDelay ?? TimeSpan.FromSeconds(2);
-            _requesterQueue = new Queue<IActorRef>();
+            //_requesterQueue = new Queue<IActorRef>();
+            _requesterDictionary = new Dictionary<int, IActorRef>();
+            _responseBuffer = new byte[] { };
             Become(EstablishConnect);
         }
 
@@ -173,13 +181,15 @@ namespace Tarantool.Net
                         state = new ConnectionFailed(_host.ToString(), _port);
                     else
                     {
-                        //scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(1), self, new Heartbeat(_heartbeatDelay), self);
+                        //Console.WriteLine($"Receive1");
+
+                        scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(1), self, new Heartbeat(_heartbeatDelay), self);
                     }
+
+
                     return state;
                 }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously).PipeTo(_listener);
-                
                 Become(WaitingAuth);
-
             });
 
             Receive<ReceiveTimeout>(t =>
@@ -205,14 +215,22 @@ namespace Tarantool.Net
         private void ReceiveData(Tcp.Received data)
         {
             _lastDataReceived = DateTime.Now;
-            var response = ParseResponse(data.Data.ToArray());
-            var sender = _requesterQueue.Dequeue();
-            if (sender != null)
+            var responses = ParseResponse(data.Data.ToArray());
+
+            foreach (var response in responses)
             {
-                if (response.IsError)
-                    sender.Tell(new Failure {Exception = new Exception(response.Error)}, Self);
-                else
-                    sender.Tell(response);
+                if (!_requesterDictionary.ContainsKey(response.Sync))
+                    return;
+
+                var sender = _requesterDictionary[response.Sync]; //_requesterQueue.Dequeue();
+
+                if (sender != null)
+                {
+                    if (response.IsError)
+                        sender.Tell(new Failure { Exception = new Exception(response.Error) }, Self);
+                    else
+                        sender.Tell(response);
+                }
             }
         }
 
@@ -224,14 +242,14 @@ namespace Tarantool.Net
             });
 
             ConnectionManagement();
-            
+
         }
 
         private void ConnectionManagement()
         {
             Receive<Tcp.ConnectionClosed>(_ =>
             {
-                _requesterQueue.Clear();
+                _requesterDictionary.Clear();
                 _listener.Tell(new Disconnected(_host.ToString(), _port));
             });
 
@@ -239,7 +257,10 @@ namespace Tarantool.Net
             Receive<Tcp.CommandFailed>(p => p.Cmd is Tcp.Connect,
                 c => _listener.Tell(new ConnectionFailed(_host.ToString(), _port)));
 
-            Receive<CommandAck>(s => _requesterQueue.Enqueue(s.Sender));
+            Receive<CommandAck>(s =>
+            {
+                _requesterDictionary.Add(s.Sync, s.Sender);
+            });
 
             Receive<Heartbeat>(h =>
             {
@@ -258,21 +279,68 @@ namespace Tarantool.Net
         {
             Receive<RequestBase>(s =>
             {
+                _sender = Sender;
                 SendRequest(s);
             });
         }
 
+        private IActorRef _sender = null;
         private void SendRequest(RequestBase s)
         {
-            var message = s.WithSync(_currentConnection.GetNextSync()).GetBytes();
-            _currentConnection.Socket.Tell(Tcp.Write.Create(ByteString.Create(message), new CommandAck(Sender)));
+            var sync = _currentConnection.GetNextSync();
+            var message = s.WithSync(sync).GetBytes();
+            _currentConnection.Socket.Tell(Tcp.Write.Create(ByteString.Create(message), new CommandAck(Sender, sync)));
         }
 
-        private Response ParseResponse(byte[] response)
+        private List<Response> ParseResponse(byte[] response)
         {
-            var resp = new byte[response.Length - 5];
-            Array.Copy(response, 5, resp, 0, response.Length - 5);
-            return SerializationContext.Default.GetSerializer<Response>().UnpackSingleObject(resp);
+            var result = new List<Response>();
+            int totalLen = response.Length;
+
+            if (_responseBuffer.Length > 0)
+            {
+                totalLen = totalLen + _responseBuffer.Length;
+                var temp = new byte[totalLen];
+                Array.Copy(_responseBuffer, 0, temp, 0, _responseBuffer.Length);
+                Array.Copy(response, 0, temp, _responseBuffer.Length, response.Length);
+                response = temp;
+                _responseBuffer = new byte[0];
+            }
+
+            int position = 0;
+            while (position < totalLen)
+            {
+                position++;
+                if (totalLen - position < 4)
+                {
+                    position = position - 1;
+                    _responseBuffer = new byte[totalLen - position];
+                    Array.Copy(response, position, _responseBuffer, 0, totalLen - position);
+                    break;
+                }
+                
+                var respLenArray = new byte[4];
+                Array.Copy(response, position, respLenArray, 0, 4);
+                Array.Reverse(respLenArray);
+                var respLen = BitConverter.ToInt32(respLenArray, 0);
+                position = position + 4;
+
+                if (totalLen - position < respLen)
+                {
+                    position = position - 5;
+                    _responseBuffer = new byte[totalLen - position];
+                    Array.Copy(response, position, _responseBuffer, 0, totalLen - position);
+                    break;
+                }
+
+                var resp = new byte[respLen];
+                Array.Copy(response, position, resp, 0, respLen);
+                position = position + respLen;
+
+                result.Add(Serializer.UnpackSingleObject(resp));
+            }
+
+            return result;
         }
 
     }

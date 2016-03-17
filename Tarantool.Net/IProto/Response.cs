@@ -16,42 +16,56 @@ namespace Tarantool.Net.IProto
 
         public void UnpackFromMessage(Unpacker unpacker)
         {
+            int codeResult;
             MessagePackObject obj;
+            unpacker.ReadInt32(out codeResult);
+            unpacker.ReadObject(out obj);
+            ParseIProtoResponse(codeResult, obj);
 
-            while (unpacker.ReadObject(out obj))
+            unpacker.ReadInt32(out codeResult);
+            unpacker.ReadObject(out obj);
+            ParseIProtoResponse(codeResult, obj);
+
+            unpacker.ReadInt32(out codeResult);
+            unpacker.ReadObject(out obj);
+            ParseIProtoResponse(codeResult, obj);
+
+            unpacker.ReadObject(out obj);
+            if (obj.IsDictionary)
             {
-                if (obj.IsDictionary)
+                var dict = obj.AsDictionary();
+                if (dict.Keys.Count > 0)
                 {
-                    var dict = obj.AsDictionary();
-                    if (dict.Keys.Count > 0)
+                    foreach (var key in dict.Keys)
                     {
-                        foreach(var key in dict.Keys)
-                        {
-                            var code = key.AsInt32();
+                        var code = key.AsInt32();
 
-                            switch (code)
-                            {
-                                case (int)Key.CODE:
-                                    Code = dict[key].AsInt32();
-                                    break;
-                                case (int)Key.SYNC:
-                                    Sync = dict[key].AsInt32();
-                                    break;
-                                case (int)Key.SCHEMA_ID:
-                                    SchemaId = dict[key].AsInt32();
-                                    break;
-                                case (int)Key.DATA:
-                                    Body = dict[key].AsList().Select(i => new Tuple(i.AsList().Select(a => a.ToObject()).ToList())).ToList();
-                                    break;
-                                case (int)Key.ERROR:
-                                    Error = dict[key].AsString();
-                                    IsError = true;
-                                    break;
-                            }
-                        }
+                        ParseIProtoResponse(code, dict[key]);
                     }
                 }
+            }
+        }
 
+        private void ParseIProtoResponse(int code, MessagePackObject value)
+        {
+            switch (code)
+            {
+                case (int)Key.CODE:
+                    Code = value.AsInt32();
+                    break;
+                case (int)Key.SYNC:
+                    Sync = value.AsInt32();
+                    break;
+                case (int)Key.SCHEMA_ID:
+                    SchemaId = value.AsInt32();
+                    break;
+                case (int)Key.DATA:
+                    Body = value.AsList().Select(i => new Tuple(i.AsList().Select(a => a.ToObject()).ToList())).ToList();
+                    break;
+                case (int)Key.ERROR:
+                    Error = value.AsString();
+                    IsError = true;
+                    break;
             }
         }
     }

@@ -31,7 +31,7 @@ namespace Tarantool.Net
             public Connection.Connected Connected { get; }
         }
 
-        protected IActorRef Connection = Context.System.DeadLetters;
+        public IActorRef Connection = Context.System.DeadLetters;
 
         private readonly AuthToken _authToken;
         private readonly HashSet<IActorRef> _listeners;
@@ -124,7 +124,7 @@ namespace Tarantool.Net
         protected void NotifyStateChanged(Connection.StateChange newState)
         {
             Status = newState;
-            _listeners.ForEach(l => ActorRefImplicitSenderExtensions.Tell(l, newState));
+            _listeners.ForEach(l => l.Tell(newState));
         }
     }
 }

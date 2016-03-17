@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Tarantool.Net.IProto;
@@ -13,10 +14,10 @@ namespace Tarantool.Net.Tests
         private readonly IActorRef _tarantool;
         public TarantoolClientTest()
         {
-            _tarantool = ActorOfAsTestActorRef<Tarantool>(Tarantool.Create(host: "10.20.15.10", port: 3302, authToken: new AuthToken("podmogov", "123"), listeners: new HashSet<IActorRef> { TestActor }));
+            _tarantool = ActorOfAsTestActorRef<Tarantool>(Tarantool.Create(port: 3301, listeners: new HashSet<IActorRef> { TestActor }));
 
-            ExpectMsg<Connection.Connecting>(m => m.Host == "10.20.15.10" && m.Port == 3302);
-            ExpectMsg<Connection.Connected>(TimeSpan.FromSeconds(30));
+            ExpectMsg<Connection.Connecting>();
+            ExpectMsg<Connection.Connected>();
         }
 
         [Fact(DisplayName = "Should respond to ping")]
@@ -31,13 +32,25 @@ namespace Tarantool.Net.Tests
         {
             _tarantool.Tell(Request
                 .Select()
-                .WithSpaceId(512)
+                .WithSpaceId(513)
                 .WithIndexId(0)
                 .WithIterator(Iterator.ALL)
                 .Build()
                 );
             
             ExpectMsg<Response>(r => !r.IsError);
+        }
+
+        [Fact]
+        public void Pipeline()
+        {
+            _tarantool.Tell(Request.Ping().Build());
+            _tarantool.Tell(Request.Ping().Build());
+            _tarantool.Tell(Request.Ping().Build());
+
+            ExpectMsg<Response>();
+            ExpectMsg<Response>();
+            ExpectMsg<Response>();
         }
     }
 }

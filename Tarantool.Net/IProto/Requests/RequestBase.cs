@@ -6,6 +6,7 @@ namespace Tarantool.Net.IProto.Requests
 {
     public abstract class RequestBase
     {
+        private static readonly MessagePackSerializer<RequestBody> Serializer = SerializationContext.Default.GetSerializer<RequestBody>();
         internal PacketHeader Header;
         internal readonly RequestBody Body = new RequestBody();
 
@@ -21,7 +22,7 @@ namespace Tarantool.Net.IProto.Requests
                 PackerCompatibilityOptions.PackBinaryAsRaw;
 
             var header = Header.Raw;
-            var body = SerializationContext.Default.GetSerializer<RequestBody>().PackSingleObject(Body);
+            var body = Serializer.PackSingleObject(Body);
 
             var totalLen = body.Length + header.Length;
             var resArray = new byte[totalLen + 5];
