@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Tarantool.Net.IProto.Requests;
 
 namespace Tarantool.Net.IProto.Builders
@@ -18,10 +19,9 @@ namespace Tarantool.Net.IProto.Builders
             return this;
         }
 
-        public CallRequestBuilder WithTuple(Func<TupleBuilder, TupleBuilder> callTupleBuilder)
+        public CallRequestBuilder WithParams(params object[] parameters)
         {
-            var ctb = new TupleBuilder(_callRequest.Tuple);
-            _callRequest.Tuple = callTupleBuilder(ctb);
+            _callRequest.Params = parameters.ToList();
             return this;
         }
 
@@ -29,7 +29,7 @@ namespace Tarantool.Net.IProto.Builders
         {
             WithHeader(Command.CALL)
                 .WithInstruction(Key.FUNCTION, _callRequest.FunctionName)
-                .WithTuple(_callRequest.Tuple);
+                .WithParams(_callRequest.Params);
 
             return this;
         }

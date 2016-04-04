@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.IO;
 using MsgPack.Serialization;
 using Tarantool.Net.IProto;
@@ -120,6 +121,8 @@ namespace Tarantool.Net
         private CurrentConnection _currentConnection;
         private DateTime _lastDataReceived = DateTime.Now;
         private byte[] _responseBuffer;
+        private ICancelable _heartbeatTimer;
+
         public Connection(IActorRef listener, string host, int port, TimeSpan connectionTimeout, TimeSpan? heartbeatDelay = null)
         {
             _listener = listener;
@@ -127,7 +130,6 @@ namespace Tarantool.Net
             _port = port;
             _connectionTimeout = connectionTimeout;
             _heartbeatDelay = heartbeatDelay ?? TimeSpan.FromSeconds(2);
-            //_requesterQueue = new Queue<IActorRef>();
             _requesterDictionary = new Dictionary<int, IActorRef>();
             _responseBuffer = new byte[] { };
             Become(EstablishConnect);
@@ -181,9 +183,7 @@ namespace Tarantool.Net
                         state = new ConnectionFailed(_host.ToString(), _port);
                     else
                     {
-                        //Console.WriteLine($"Receive1");
-
-                        scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(1), self, new Heartbeat(_heartbeatDelay), self);
+                        _heartbeatTimer = scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(1), self, new Heartbeat(_heartbeatDelay), self);
                     }
 
 
@@ -222,13 +222,13 @@ namespace Tarantool.Net
                 if (!_requesterDictionary.ContainsKey(response.Sync))
                     return;
 
-                var sender = _requesterDictionary[response.Sync]; //_requesterQueue.Dequeue();
+                var sender = _requesterDictionary[response.Sync];
 
                 if (sender != null)
                 {
                     if (response.IsError)
                         sender.Tell(new Failure { Exception = new Exception(response.Error) }, Self);
-                    else
+                    else if (!Equals(sender, Self))
                         sender.Tell(response);
                 }
             }
@@ -251,6 +251,8 @@ namespace Tarantool.Net
             {
                 _requesterDictionary.Clear();
                 _listener.Tell(new Disconnected(_host.ToString(), _port));
+                _heartbeatTimer.Cancel();
+                Become(EstablishConnect);
             });
 
             Receive<Tcp.CommandFailed>(p => p.Cmd is Tcp.Write, c => _currentConnection.Socket.Tell(c.Cmd));

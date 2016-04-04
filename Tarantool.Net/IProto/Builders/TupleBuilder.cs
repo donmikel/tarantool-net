@@ -1,4 +1,6 @@
-﻿namespace Tarantool.Net.IProto.Builders
+﻿using System;
+
+namespace Tarantool.Net.IProto.Builders
 {
     public class TupleBuilder
     {
@@ -14,6 +16,7 @@
             _tuple.AddField(data);
             return this;
         }
+
 
         public static implicit operator Tuple(TupleBuilder tupleBuilder)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using MsgPack;
 using MsgPack.Serialization;
 
@@ -66,6 +67,12 @@ namespace Tarantool.Net.IProto.Requests
         protected internal RequestBuilder WithTuple(Tuple tuple)
         {
             _replaceRequest.Body.AddBodyData(Key.TUPLE, tuple);
+            return this;
+        }
+
+        protected internal RequestBuilder WithParams(List<object> parameters)
+        {
+            _replaceRequest.Body.AddBodyData(Key.TUPLE, parameters);
             return this;
         }
 

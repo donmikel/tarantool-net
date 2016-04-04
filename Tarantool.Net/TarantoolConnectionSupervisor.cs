@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Util.Internal;
 using Tarantool.Net.IProto;
 using Tarantool.Net.IProto.Requests;
@@ -37,6 +38,7 @@ namespace Tarantool.Net
         private readonly HashSet<IActorRef> _listeners;
         private readonly TimeSpan _connectionTimeOut;
         private readonly TimeSpan? _connectionHeartbeatDelay;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         protected TarantoolConnectionSupervisor(AuthToken authToken, HashSet<IActorRef> listeners, TimeSpan connectionTimeOut, TimeSpan? connectionHeartbeatDelay = null)
         {
@@ -52,6 +54,8 @@ namespace Tarantool.Net
 
         protected void Connected()
         {
+            _log.Warning("Connected");
+            
             HandleListeners();
 
             Receive<RequestBase>(m => Connection.Forward(m));
@@ -66,6 +70,7 @@ namespace Tarantool.Net
 
         protected virtual void Disconnected()
         {
+           _log.Warning("Disconnected");
             HandleListeners();
 
             Receive<Connect>(x =>

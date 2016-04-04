@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using Akka.Dispatch.SysMsg;
 using MsgPack;
+using Tarantool.Net.IProto.Builders;
 
 namespace Tarantool.Net.IProto
 {
@@ -25,6 +28,12 @@ namespace Tarantool.Net.IProto
             _fields.Clear();
         }
 
+        public static Tuple Create(Func<TupleBuilder, TupleBuilder> keyTupleBuilder)
+        {
+            var ktb = new TupleBuilder(new Tuple());
+            return keyTupleBuilder(ktb);
+        }
+
         public List<object> Fields => _fields;
 
         private readonly List<object> _fields = new List<object>();
@@ -37,10 +46,11 @@ namespace Tarantool.Net.IProto
                 if (field is string)
                     packer.PackString(field.ToString());
                 else {
-                    packer.PackObject(field);
+                    packer.Pack(field);
                 }
             }
         }
+
 
         public override string ToString()
         {
