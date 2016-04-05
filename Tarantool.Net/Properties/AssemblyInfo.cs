@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 // набора атрибутов. Измените значения этих атрибутов, чтобы изменить сведения,
 // связанные со сборкой.
 [assembly: AssemblyTitle("Tarantool-net")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("A .Net client for Tarantool written with the Akka.Net I/O package")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("donmikel")]
 [assembly: AssemblyProduct("Tarantool-net")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
