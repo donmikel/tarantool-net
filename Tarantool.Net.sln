@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tarantool.Net", "Tarantool.Net\Tarantool.Net.csproj", "{8EE464C8-B151-42C3-96BF-8D655FF8B6B9}"
 EndProject
@@ -11,7 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tarantool.Net.Examples", "T
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{35166E13-3CA4-4013-BB47-623FE1894423}"
 	ProjectSection(SolutionItems) = preProject
-		NuGet\NuGet.exe = NuGet\NuGet.exe
 		README.md = README.md
 	EndProjectSection
 EndProject
