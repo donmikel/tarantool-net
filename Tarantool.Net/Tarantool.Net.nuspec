@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Tarantool.NET</id>
+    <version>$version$</version>
+    <title>Tarantool.NET</title>
+    <authors>donmikel</authors>
+    <owners>Mike Po</owners>
+    <projectUrl>https://github.com/donmikel/tarantool-net</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A .Net client for Tarantool http://tarantool.org written with the Akka.Net I/O package</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2016</copyright>
+    <tags>tarantool akka.net</tags>
+  </metadata>
+</package>
