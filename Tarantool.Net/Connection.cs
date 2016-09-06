@@ -18,6 +18,7 @@ namespace Tarantool.Net
 {
     public class Connection : ReceiveActor
     {
+        private const int SyncMaxValue = int.MaxValue - 100;
         private static readonly MessagePackSerializer<Response> Serializer =
             SerializationContext.Default.GetSerializer<Response>();
         public class StateChange { }
@@ -102,7 +103,7 @@ namespace Tarantool.Net
 
             public int GetNextSync()
             {
-                if (Sync > 1000000) Sync = 0;
+                if (Sync > SyncMaxValue) Sync = 0;
                 return Sync++;
             }
 
@@ -222,6 +223,7 @@ namespace Tarantool.Net
                 if (!_requesterDictionary.ContainsKey(response.Sync))
                     return;
 
+
                 var sender = _requesterDictionary[response.Sync];
 
                 if (sender != null)
@@ -231,6 +233,7 @@ namespace Tarantool.Net
                     else if (!Equals(sender, Self))
                         sender.Tell(response);
                 }
+                _requesterDictionary.Remove(response.Sync);
             }
         }
 

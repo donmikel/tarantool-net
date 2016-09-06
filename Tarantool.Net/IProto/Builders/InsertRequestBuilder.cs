@@ -30,6 +30,12 @@ namespace Tarantool.Net.IProto.Builders
             return this;
         }
 
+        public InsertRequestBuilder WithTuple(object[] tuple)
+        {
+            _insertReplaceRequest.Tuple = new Tuple(tuple);
+            return this;
+        }
+
         public override RequestBase Build()
         {
             WithHeader(Command.INSERT)
